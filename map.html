@@ -1,0 +1,333 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Sprachen Karte</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+    <style>
+        body {
+            background-color: white !important;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .map-wrapper {
+            background-color: #f0f0f0; 
+            padding: 0px;
+            border-radius: 0px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%; 
+            height: 100%; 
+        }
+
+        .map-container {
+            border: 5px solid black; /* White border around the map container */
+            padding: 0px; /* Adjust padding as needed */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); /* Optional shadow for depth */
+            width: 80%; /* Adjust width as needed */
+            height: 70%; /* Adjust height as needed */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: white;
+        }
+        #chartdiv {
+            width: 100%;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .status-buttons {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 20px; /* Adjust spacing as needed */
+          padding-top: 20px; /* Add padding above the buttons */
+        }
+
+        .status-button {
+          margin: 0 10px; /* Adjust spacing between buttons */
+          padding: 12px 24px; /* Ensure sufficient padding for a larger clickable area */
+          border: none;
+          border-radius: 25px; /* Rounded border */
+          color: black !important;
+          font-size: 16px;
+          font-weight: bold; 
+          cursor: pointer;
+          /* background-image: linear-gradient(to right, #4CAF50, #2ECC71); Gradient background */
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Soft shadow */
+          transition: all 0.3s ease; /* Smooth transition */
+          line-height: 1.5; /* Adjust line height */
+          display: flex; /* Use inline-flex for better vertical alignment */
+          justify-content: center; /* Center text horizontally */
+          align-items: center; /* Center text vertically */
+
+        }
+
+        .status-button:hover {
+            transform: translateY(-2px); /* Lift on hover */
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
+        }
+
+        .institutional {
+            background-image: linear-gradient(to right, white, lightgray)
+        }
+
+        .stable {
+            background-image: linear-gradient(to right,#2ECC71, #4CAF50); /* Green gradient */
+        }
+
+        .endangered {
+            background-image: linear-gradient(to right, #F1C40F, #F39C12); /* Yellow gradient */
+        }
+
+        .extinct {
+            background-image: linear-gradient(to right, #E74C3C, #C0392B); /* Red gradient */
+        }
+    </style>
+</head>
+
+<body class="is-preload">
+    <!-- Wrapper -->
+    <div id="wrapper">
+        <nav id="nav" style="position:initial">
+          <ul>
+              <li><a href="index.html">Introduction</a></li>
+              <li><a href="map.html">View Map</a></li>
+              <li><a href="information.html">Information</a></li>
+          </ul>
+        </nav>
+    
+        <!-- Header, Nav, Main, and Footer for the map page -->
+        <!-- Add your map section content here -->
+        <!-- Map Container -->
+        <section id="cta" class="main special">
+            <header class="major">
+                <h2>The Map</h2>
+                <p>Data from Ethnologue © 2024 SIL International. Reproduction Prohibited</p>
+            </header>
+            <!-- Map Container -->
+
+            <div class="status-buttons">
+              <button class="status-button institutional" onclick="filterLanguages('Institutional')">Institutional</button>
+              <button class="status-button stable" onclick="filterLanguages('Stable')">Stable</button>
+              <button class="status-button endangered" onclick="filterLanguages('Endangered')">Endangered</button>
+              <button class="status-button extinct"  onclick="filterLanguages('Extinct')">Extinct</button>
+          </div>
+
+          <div id="chartdiv" class="map-container" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100vh; margin: 0 auto;"></div> <!-- Ensure to set height and width for the map container -->
+
+            
+        </section>
+                      
+        <!-- Scripts -->
+        <!-- Load the amCharts library -->
+        <script type="module" src="https://cdn.amcharts.com/lib/5/index.js"></script>
+        <script type="module" src="https://cdn.amcharts.com/lib/5/map.js"></script>
+        <script type="module" src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
+        <script type="module" src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+        <!-- Load your map.js script -->
+        <script src="assets/js/map.js"></script>
+
+    <!-- Resources -->
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+    
+    <!-- Chart code -->
+    <script>
+        let languageData = {};
+        let pointSeries;
+        let chart;
+        var root;
+
+        // Define initializeMap before calling it
+        function initializeMap(status) {
+            am5.ready(function() {
+                
+                
+                // Create root element
+                root = am5.Root.new("chartdiv");
+                root.fps = 144;
+                // Set themes
+                root.setThemes([am5themes_Animated.new(root)]);
+
+                // Create the map chart
+                var chart = root.container.children.push(am5map.MapChart.new(root, {
+                    panX: "translateX",
+                    panY: "translateY",
+                    projection: am5map.geoMercator()
+                }));
+
+                // Create polygon series for countries
+                var polygonSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {
+                    geoJSON: am5geodata_worldLow,
+                    exclude: ["AQ"]
+                }));
+                
+                // Create point series for languages
+                pointSeries = chart.series.push(am5map.MapPointSeries.new(root, {
+                    valueField: "value",
+                    categoryField: "category"
+                }));
+                
+
+                pointSeries.data.clear();
+                
+                switch (status) {
+                    case "Stable": //green
+                        pointSeries.bullets.push(function() {
+                            return am5.Bullet.new(root, {
+                                sprite: am5.Circle.new(root, {
+                                    radius: 3,
+                                    fill: am5.color(0x00FF00),
+                                    tooltipText: "{name}\nFamily: {family}\nPopulation: {population}",
+                                    tooltipData: {
+                                        family: "{family}",
+                                        population: "{population}"
+                                    }
+                                })
+                            });
+                        });
+                    break;
+                    case "Endangered": //yellow
+                        pointSeries.bullets.push(function() {
+                            return am5.Bullet.new(root, {
+                                sprite: am5.Circle.new(root, {
+                                    radius: 3,
+                                    fill: am5.color(0xFFFF00),
+                                    tooltipText: "{name}\nFamily: {family}\nPopulation: {population}",
+                                    tooltipData: {
+                                        family: "{family}",
+                                        population: "{population}"
+                                    }
+                                })
+                            });
+                        });
+                        break;
+                    case "Extinct": //red
+                        pointSeries.bullets.push(function() {
+                            return am5.Bullet.new(root, {
+                                sprite: am5.Circle.new(root, {
+                                    radius: 3,
+                                    fill: am5.color(0xFF0000),
+                                    tooltipText: "{name}\nFamily: {family}\nPopulation: {population}",
+                                    tooltipData: {
+                                        family: "{family}"
+                                    }
+                                })
+                            });
+                        });
+                        break;
+                    default: // black institutional
+                        pointSeries.bullets.push(function() {
+                            return am5.Bullet.new(root, {
+                                sprite: am5.Circle.new(root, {
+                                    radius: 3,
+                                    fill: am5.color(0x000000),
+                                    tooltipText: "{name}\nFamily: {family}\nPopulation: {population}",
+                                    tooltipData: {
+                                        family: "{family}",
+                                        population: "{population}"
+                                    }
+                                })
+                            });
+                        });
+                        
+                }
+
+                console.log('Map initialized.');
+            });
+        }
+
+        function addPoint(lat, long, name, family, population) {
+            pointSeries.data.push({
+                geometry: {
+                    type: "Point",
+                    coordinates: [parseFloat(lat), parseFloat(long)]
+                },
+                name: name,
+                family: family,
+                population: population
+            });
+        }
+
+        // on page load
+        // Fetch JSON data
+        fetch('language_info.json') // use full data
+        // fetch('language_info_test.json')  // test data
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            languageData = data;
+            console.log('Loaded JSON data:', languageData);
+            initializeMap("Default");
+
+            // Add points after map initialization
+            for (const [name, data] of Object.entries(languageData)) {
+                if (data.language_status === 'Institutional')
+                    addPoint(data.coordinates.latitude, data.coordinates.longitude, name, data.family, data.population);
+            }
+        })
+        .catch(error => console.error('Error loading JSON:', error));
+
+
+        //on button press
+        function filterLanguages(status) {
+            // Check if root exists and remove it
+            pointSeries.data.clear();
+            root.dispose();
+            console.log(status);
+            // Initialize map with the new status
+            initializeMap(status);
+
+        
+            for (const [name, data] of Object.entries(languageData)) {
+                if (data.language_status === status) {
+                    addPoint(data.coordinates.latitude, data.coordinates.longitude, name, data.family, data.population);
+                }
+            }
+        }
+    </script>
+
+    <p>
+        <br>
+        Population refers to the number of native speakers (L1 users). Some languages classified as endangered may have a population count of zero because there are no speakers for whom it is their first language. <br>
+        <br>
+        Language Status (Vitality) indicates the health of a language. Institutional and Stable statuses denote that the language is considered alive, whereas Endangered signifies a precarious state, and Extinct indicates the language is no longer spoken and its associated ethnic identity has been lost. These distinctions are outlined by the Ethnologue website as follows:<br>
+        <br>
+        Institutional: The language is used and supported by institutions beyond the home and local community. <br>
+        Stable: While not supported by formal institutions, the language remains the primary means of communication within the home and community, with all children learning and using it.<br>
+        Endangered: It is no longer the primary language learned and used by children. <br>
+        Extinct: The language is no longer spoken, and its associated ethnic identity is no longer retained. <br>
+
+    </p>
+    
+    <!-- HTML -->
+    <!-- <div id="chartdiv, Data from Ethnologue © 2024 SIL International. Reproduction Prohibited"></div>
+    amCharts
+    </div> -->
+
+    <!-- Additional Scripts -->
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/jquery.scrollex.min.js"></script>
+    <script src="assets/js/jquery.scrolly.min.js"></script>
+    <script src="assets/js/browser.min.js"></script>
+    <script src="assets/js/breakpoints.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
